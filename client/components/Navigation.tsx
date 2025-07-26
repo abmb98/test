@@ -47,11 +47,11 @@ export function Navigation() {
               </div>
               <div className="text-left">
                 <h1 className="text-lg font-bold text-sidebar-foreground">
-                  Gestion du Dortoir
+                  Gestion du secteur
                 </h1>
                 <div className="flex items-center space-x-2">
                   <p className="text-xs text-sidebar-foreground/60">
-                    Système de gestion des ouvriers
+                  FINCA 20
                   </p>
                   {!isOnline && (
                     <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" title="Hors ligne" />
