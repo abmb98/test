@@ -187,16 +187,25 @@ export const dormsService = {
 // Rooms Service
 export const roomsService = {
   async getAll(): Promise<Room[]> {
-    requireAuth();
-    const querySnapshot = await getDocs(
-      query(collection(db, ROOMS_COLLECTION), orderBy('room_number'))
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const querySnapshot = await getDocs(
+          query(collection(db, ROOMS_COLLECTION), orderBy('room_number'))
+        );
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: timestampToDate(doc.data().created_at),
+          updated_at: timestampToDate(doc.data().updated_at)
+        })) as Room[];
+      },
+      () => {
+        // Offline fallback
+        offlineDataService.initialize();
+        return offlineDataService.getRooms();
+      }
     );
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      created_at: timestampToDate(doc.data().created_at),
-      updated_at: timestampToDate(doc.data().updated_at)
-    })) as Room[];
   },
 
   async getByDorm(dormId: string): Promise<Room[]> {
