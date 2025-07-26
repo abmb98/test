@@ -159,16 +159,23 @@ const withErrorHandling = async <T>(
 // Dorms Service
 export const dormsService = {
   async getAll(): Promise<Dorm[]> {
-    return withErrorHandling(async () => {
-      requireAuth();
-      const querySnapshot = await getDocs(collection(db, DORMS_COLLECTION));
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        created_at: timestampToDate(doc.data().created_at),
-        updated_at: timestampToDate(doc.data().updated_at)
-      })) as Dorm[];
-    });
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const querySnapshot = await getDocs(collection(db, DORMS_COLLECTION));
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: timestampToDate(doc.data().created_at),
+          updated_at: timestampToDate(doc.data().updated_at)
+        })) as Dorm[];
+      },
+      () => {
+        // Offline fallback
+        offlineDataService.initialize();
+        return offlineDataService.getDorms();
+      }
+    );
   },
 
   async create(dorm: Omit<Dorm, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
