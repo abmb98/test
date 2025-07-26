@@ -313,8 +313,10 @@ export function Workers() {
     try {
       setLoading(true);
       setError('');
-      await initializeSampleData();
-      setSuccess('Données d\'exemple créées avec succès !');
+
+      // Initialize offline data
+      offlineDataService.initialize();
+      setSuccess('Données d\'exemple créées avec succès en mode hors ligne !');
       await loadInitialData(); // Reload data
     } catch (err: any) {
       setError(`Erreur lors de l'initialisation: ${err.message}`);
