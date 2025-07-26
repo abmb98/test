@@ -121,7 +121,7 @@ export function Navigation() {
             </div>
             <div className="text-left">
               <h1 className="text-lg font-bold text-sidebar-foreground">
-                Gestion du Dortoir
+                Gestion du secteur
               </h1>
             </div>
           </div>
@@ -152,7 +152,7 @@ export function Navigation() {
                     </div>
                     <div className="text-left">
                       <h1 className="text-lg font-bold text-sidebar-foreground">
-                        Gestion du Dortoir
+                        Gestion du secteur
                       </h1>
                     </div>
                   </div>
