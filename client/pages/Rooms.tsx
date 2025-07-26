@@ -100,7 +100,7 @@ export function Rooms() {
   };
 
   const getDormRooms = (dormId: string) => {
-    return rooms.filter(room => room.dorm_id === dormId);
+    return updatedRooms.filter(room => room.dorm_id === dormId);
   };
 
   const getOccupancyColor = (occupancy: number, capacity: number) => {
