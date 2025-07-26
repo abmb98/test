@@ -443,9 +443,17 @@ service cloud.firestore {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestion des Ouvriers</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground">Gestion des Ouvriers</h1>
+            {offlineDataService.isOfflineMode() && (
+              <Badge variant="outline" className="bg-warning/10 text-warning border-warning">
+                Mode hors ligne
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Voir et gérer tous les ouvriers résidant dans le dortoir
+            {offlineDataService.isOfflineMode() && ' (données locales)'}
           </p>
         </div>
         
