@@ -88,6 +88,7 @@ export function Rooms() {
 
   // Get updated room data with current worker counts
   const getUpdatedRooms = () => {
+    if (!rooms.length || !workers.length) return rooms;
     return rooms.map(room => ({
       ...room,
       current_occupancy: getRoomOccupancy(room.id)
