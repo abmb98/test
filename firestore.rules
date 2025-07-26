@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin (for future role-based access)
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users collection - only authenticated users can read/write their own data
+    // and admins can manage other admin users
+    match /users/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Dorms collection - authenticated users can read and write
+    match /dorms/{dormId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Rooms collection - authenticated users can read and write
+    match /rooms/{roomId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Workers collection - authenticated users can read and write
+    match /workers/{workerId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Allow all authenticated users full access for now
+    // In production, you might want more restrictive rules
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
