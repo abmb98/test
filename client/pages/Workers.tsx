@@ -71,25 +71,36 @@ export function Workers() {
     try {
       setLoading(true);
       setError('');
+
+      // Test Firebase connection first
+      console.log('Testing Firebase connection...');
+      const connectionTest = await testFirebaseConnection();
+      if (!connectionTest.connected) {
+        setError(`Connexion Firebase échouée: ${connectionTest.error}. Vérifiez les règles Firestore ou votre connexion.`);
+        return;
+      }
+
+      console.log('Loading workers data...');
       const [workersData, roomsData, dormsData] = await Promise.all([
         workersService.getAll(),
         roomsService.getAll(),
         dormsService.getAll()
       ]);
-      
+
       setWorkers(workersData);
       setRooms(roomsData);
       setDorms(dormsData);
+      console.log('Data loaded successfully:', { workers: workersData.length, rooms: roomsData.length, dorms: dormsData.length });
     } catch (err: any) {
       console.error('Workers data loading error:', err);
-      
-      // Check if it's a network connectivity issue
-      if (err.message?.includes('Network connection issue') || 
-          err.message?.includes('Failed to fetch') ||
-          !navigator.onLine) {
-        setError('Problème de connexion réseau. Veuillez vérifier votre connexion Internet et réessayer.');
+
+      // Enhanced error handling
+      if (err.message?.includes('permission-denied')) {
+        setError('Accès refusé. Vérifiez les règles Firestore dans la console Firebase.');
+      } else if (err.message?.includes('Failed to fetch') || !navigator.onLine) {
+        setError('Problème de connexion réseau. Vérifiez votre connexion Internet.');
       } else {
-        setError('Erreur lors du chargement des données: ' + (err.message || 'Erreur inconnue'));
+        setError(`Erreur: ${err.message || 'Erreur inconnue'}`);
       }
     } finally {
       setLoading(false);
