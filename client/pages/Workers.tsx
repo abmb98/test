@@ -278,16 +278,43 @@ export function Workers() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Ouvriers');
-    
+
     // Auto-size columns
     const maxWidth = 20;
     const colWidths = Object.keys(exportData[0] || {}).map(key => ({
       wch: Math.min(Math.max(key.length, 10), maxWidth)
     }));
     worksheet['!cols'] = colWidths;
-    
+
     XLSX.writeFile(workbook, `ouvriers_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     setSuccess('Fichier Excel exporté avec succès');
+  };
+
+  const handleTestConnection = async () => {
+    setLoading(true);
+    const result = await testFirebaseConnection();
+    if (result.connected) {
+      setSuccess('Connexion Firebase réussie !');
+    } else {
+      setError(`Échec de connexion Firebase: ${result.error}`);
+    }
+    setLoading(false);
+  };
+
+  const handleInitializeData = async () => {
+    if (!confirm('Cela va créer des données d\'exemple. Continuer ?')) return;
+
+    try {
+      setLoading(true);
+      setError('');
+      await initializeSampleData();
+      setSuccess('Données d\'exemple créées avec succès !');
+      await loadInitialData(); // Reload data
+    } catch (err: any) {
+      setError(`Erreur lors de l'initialisation: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRoomNumber = (roomId: string) => {
