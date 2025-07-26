@@ -4,12 +4,12 @@ import { getAuth } from 'firebase/auth';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDugV_R8dorCr1AggqNHB_1AeqjfgEgyDQ",
-  authDomain: "secteur-14f7c.firebaseapp.com",
-  projectId: "secteur-14f7c",
-  storageBucket: "secteur-14f7c.firebasestorage.app",
-  messagingSenderId: "383672334515",
-  appId: "1:383672334515:web:cabe7d65ba7d598b1718c6"
+  apiKey: "AIzaSyBBhCfocZ26gSi6mUG4fSBRuq-vjcZgxrE",
+  authDomain: "secteurf20.firebaseapp.com",
+  projectId: "secteurf20",
+  storageBucket: "secteurf20.firebasestorage.app",
+  messagingSenderId: "1093705810466",
+  appId: "1:1093705810466:web:cc5c4ba42468e7bf0c807b"
 };
 
 // Initialize Firebase
