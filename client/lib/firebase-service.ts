@@ -79,10 +79,19 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = 3): Promise<T
     try {
       return await operation();
     } catch (error: any) {
+      console.error(`Firebase operation attempt ${i + 1}/${retries} failed:`, {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        online: navigator.onLine
+      });
+
       const isNetworkError = error.message?.includes('Failed to fetch') ||
                            error.message?.includes('NetworkError') ||
+                           error.message?.includes('fetch') ||
                            error.code === 'unavailable' ||
                            error.code === 'deadline-exceeded' ||
+                           error.code === 'permission-denied' ||
                            !navigator.onLine;
 
       if (isNetworkError && i < retries - 1) {
