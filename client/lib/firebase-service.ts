@@ -321,8 +321,6 @@ export const workersService = {
   },
 
   async create(workerData: CreateWorkerRequest): Promise<string> {
-    requireAuth();
-
     // Validate required fields
     if (!workerData.room_id || workerData.room_id.trim() === '') {
       throw new Error('ID de chambre requis');
@@ -331,35 +329,53 @@ export const workersService = {
       throw new Error('ID de dortoir requis');
     }
 
-    const batch = writeBatch(db);
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const batch = writeBatch(db);
 
-    // Calculate stay duration if check_out_date exists
-    const stayDuration = workerData.check_in_date ?
-      Math.floor((new Date().getTime() - workerData.check_in_date.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        // Calculate stay duration if check_out_date exists
+        const stayDuration = workerData.check_in_date ?
+          Math.floor((new Date().getTime() - workerData.check_in_date.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Add worker
-    const workerRef = doc(collection(db, WORKERS_COLLECTION));
-    batch.set(workerRef, {
-      ...workerData,
-      status: 'Active',
-      stay_duration_days: stayDuration,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    });
+        // Add worker
+        const workerRef = doc(collection(db, WORKERS_COLLECTION));
+        batch.set(workerRef, {
+          ...workerData,
+          status: 'Active',
+          stay_duration_days: stayDuration,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
+        });
 
-    // Update room occupancy
-    const roomRef = doc(db, ROOMS_COLLECTION, workerData.room_id);
-    const roomDoc = await getDoc(roomRef);
-    if (roomDoc.exists()) {
-      const currentOccupancy = roomDoc.data().current_occupancy || 0;
-      batch.update(roomRef, {
-        current_occupancy: currentOccupancy + 1,
-        updated_at: serverTimestamp()
-      });
-    }
+        // Update room occupancy
+        const roomRef = doc(db, ROOMS_COLLECTION, workerData.room_id);
+        const roomDoc = await getDoc(roomRef);
+        if (roomDoc.exists()) {
+          const currentOccupancy = roomDoc.data().current_occupancy || 0;
+          batch.update(roomRef, {
+            current_occupancy: currentOccupancy + 1,
+            updated_at: serverTimestamp()
+          });
+        }
 
-    await batch.commit();
-    return workerRef.id;
+        await batch.commit();
+        return workerRef.id;
+      },
+      () => {
+        // Offline fallback
+        const worker: Worker = {
+          ...workerData,
+          id: '',
+          age: workerData.birth_year ? calculateAge(workerData.birth_year) : undefined,
+          status: 'Active',
+          stay_duration_days: 0,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        return offlineDataService.addWorker(worker);
+      }
+    );
   },
 
   async update(workerId: string, updates: UpdateWorkerRequest): Promise<void> {
