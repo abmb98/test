@@ -31,13 +31,20 @@ export function Rooms() {
 
   useEffect(() => {
     loadInitialData();
-    
-    // Subscribe to real-time updates
-    const unsubscribe = subscribeToRooms((updatedRooms) => {
+
+    // Subscribe to real-time updates for both rooms and workers
+    const unsubscribeRooms = subscribeToRooms((updatedRooms) => {
       setRooms(updatedRooms);
     });
 
-    return () => unsubscribe();
+    const unsubscribeWorkers = subscribeToWorkers((updatedWorkers) => {
+      setWorkers(updatedWorkers);
+    });
+
+    return () => {
+      unsubscribeRooms();
+      unsubscribeWorkers();
+    };
   }, []);
 
   const loadInitialData = async () => {
