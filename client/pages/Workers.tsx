@@ -384,16 +384,41 @@ export function Workers() {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+        <div className="flex flex-wrap gap-2">
+          {/* Debug buttons - show if there's an error or no data */}
+          {(error || workers.length === 0) && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleTestConnection}
+                disabled={loading}
+                size="sm"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Tester connexion
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleInitializeData}
+                disabled={loading}
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Créer données test
+              </Button>
+            </>
+          )}
+
+          <Button
+            variant="outline"
             onClick={exportToExcel}
             disabled={filteredWorkers.length === 0}
           >
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Exporter Excel
           </Button>
-          
+
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un ouvrier
