@@ -26,8 +26,14 @@ import {
   Download,
   FileSpreadsheet
 } from 'lucide-react';
-import { workersService, roomsService, dormsService, subscribeToWorkers, testFirebaseConnection } from '@/lib/firebase-service';
-import { initializeSampleData } from '@/lib/initialize-data';
+import {
+  hybridWorkersService as workersService,
+  hybridRoomsService as roomsService,
+  hybridDormsService as dormsService,
+  hybridSubscribeToWorkers as subscribeToWorkers,
+  testConnection as testFirebaseConnection
+} from '@/lib/hybrid-firebase-service';
+import { offlineDataService } from '@/lib/offline-data';
 import { Worker, Room, Dorm, EXIT_REASONS } from '@shared/types';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
