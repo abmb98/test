@@ -26,7 +26,14 @@ import {
   Download,
   FileSpreadsheet
 } from 'lucide-react';
-import { workersService, roomsService, dormsService, subscribeToWorkers } from '@/lib/firebase-service';
+import {
+  hybridWorkersService as workersService,
+  hybridRoomsService as roomsService,
+  hybridDormsService as dormsService,
+  hybridSubscribeToWorkers as subscribeToWorkers,
+  testConnection as testFirebaseConnection
+} from '@/lib/hybrid-firebase-service';
+import { offlineDataService } from '@/lib/offline-data';
 import { Worker, Room, Dorm, EXIT_REASONS } from '@shared/types';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -71,25 +78,36 @@ export function Workers() {
     try {
       setLoading(true);
       setError('');
+
+      // Test Firebase connection first
+      console.log('Testing Firebase connection...');
+      const connectionTest = await testFirebaseConnection();
+      if (!connectionTest.connected) {
+        setError(`Connexion Firebase échouée: ${connectionTest.error}. Vérifiez les règles Firestore ou votre connexion.`);
+        return;
+      }
+
+      console.log('Loading workers data...');
       const [workersData, roomsData, dormsData] = await Promise.all([
         workersService.getAll(),
         roomsService.getAll(),
         dormsService.getAll()
       ]);
-      
+
       setWorkers(workersData);
       setRooms(roomsData);
       setDorms(dormsData);
+      console.log('Data loaded successfully:', { workers: workersData.length, rooms: roomsData.length, dorms: dormsData.length });
     } catch (err: any) {
       console.error('Workers data loading error:', err);
-      
-      // Check if it's a network connectivity issue
-      if (err.message?.includes('Network connection issue') || 
-          err.message?.includes('Failed to fetch') ||
-          !navigator.onLine) {
-        setError('Problème de connexion réseau. Veuillez vérifier votre connexion Internet et réessayer.');
+
+      // Enhanced error handling
+      if (err.message?.includes('permission-denied')) {
+        setError('Accès refusé. Vérifiez les règles Firestore dans la console Firebase.');
+      } else if (err.message?.includes('Failed to fetch') || !navigator.onLine) {
+        setError('Problème de connexion réseau. Vérifiez votre connexion Internet.');
       } else {
-        setError('Erreur lors du chargement des données: ' + (err.message || 'Erreur inconnue'));
+        setError(`Erreur: ${err.message || 'Erreur inconnue'}`);
       }
     } finally {
       setLoading(false);
@@ -161,6 +179,7 @@ export function Workers() {
           // Setting check out date - worker becomes inactive
           updates.check_out_date = new Date(formData.check_out_date);
           updates.exit_reason = formData.exit_reason;
+          updates.status = 'Inactive';
         } else if (!formData.check_out_date && editingWorker.check_out_date) {
           // Clearing check out date - worker becomes active again
           updates.check_out_date = null;
@@ -265,16 +284,45 @@ export function Workers() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Ouvriers');
-    
+
     // Auto-size columns
     const maxWidth = 20;
     const colWidths = Object.keys(exportData[0] || {}).map(key => ({
       wch: Math.min(Math.max(key.length, 10), maxWidth)
     }));
     worksheet['!cols'] = colWidths;
-    
+
     XLSX.writeFile(workbook, `ouvriers_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     setSuccess('Fichier Excel exporté avec succès');
+  };
+
+  const handleTestConnection = async () => {
+    setLoading(true);
+    const result = await testFirebaseConnection();
+    if (result.connected) {
+      setSuccess('Connexion Firebase réussie !');
+    } else {
+      setError(`Échec de connexion Firebase: ${result.error}`);
+    }
+    setLoading(false);
+  };
+
+  const handleInitializeData = async () => {
+    if (!confirm('Cela va créer des données d\'exemple. Continuer ?')) return;
+
+    try {
+      setLoading(true);
+      setError('');
+
+      // Initialize offline data
+      offlineDataService.initialize();
+      setSuccess('Données d\'exemple créées avec succès en mode hors ligne !');
+      await loadInitialData(); // Reload data
+    } catch (err: any) {
+      setError(`Erreur lors de l'initialisation: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRoomNumber = (roomId: string) => {
@@ -333,27 +381,117 @@ export function Workers() {
     );
   }
 
+  // Show Firebase setup instructions if there's a connection error
+  if (error && workers.length === 0 && !loading) {
+    return (
+      <div className="p-6 animate-fade-in">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-destructive">🚨 Configuration Firebase requise</CardTitle>
+            <CardDescription>
+              Une configuration Firebase est nécessaire pour utiliser l'application.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+
+            <div className="space-y-3">
+              <h4 className="font-medium">Solution rapide :</h4>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Allez sur <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Firebase Console</a></li>
+                <li>Sélectionnez le projet <code className="bg-muted px-1 rounded">secteur-14f7c</code></li>
+                <li>Cliquez sur "Firestore Database" → "Règles"</li>
+                <li>Remplacez le contenu par :</li>
+              </ol>
+
+              <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+              </pre>
+
+              <p className="text-sm text-muted-foreground">
+                5. Cliquez sur "Publier" puis rafraîchissez cette page.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleTestConnection} disabled={loading}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Tester la connexion
+              </Button>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Rafraîchir la page
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestion des Ouvriers</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground">Gestion des Ouvriers</h1>
+            {offlineDataService.isOfflineMode() && (
+              <Badge variant="outline" className="bg-warning/10 text-warning border-warning">
+                Mode hors ligne
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Voir et gérer tous les ouvriers résidant dans le dortoir
+            {offlineDataService.isOfflineMode() && ' (données locales)'}
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+        <div className="flex flex-wrap gap-2">
+          {/* Debug buttons - show if there's an error or no data */}
+          {(error || workers.length === 0) && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleTestConnection}
+                disabled={loading}
+                size="sm"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Tester connexion
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleInitializeData}
+                disabled={loading}
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Créer données test
+              </Button>
+            </>
+          )}
+
+          <Button
+            variant="outline"
             onClick={exportToExcel}
             disabled={filteredWorkers.length === 0}
           >
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Exporter Excel
           </Button>
-          
+
           <Button onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un ouvrier
@@ -537,7 +675,22 @@ export function Workers() {
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            <div className="space-y-2">
+              <p>{error}</p>
+              {error.includes('permission-denied') || error.includes('Failed to fetch') ? (
+                <div className="text-sm mt-2 p-2 bg-destructive/10 rounded border-l-2 border-destructive/20">
+                  <p className="font-medium">Solutions possibles :</p>
+                  <ul className="list-disc list-inside space-y-1 mt-1">
+                    <li>Vérifiez les règles Firestore dans la console Firebase</li>
+                    <li>Assurez-vous que votre projet Firebase est configuré</li>
+                    <li>Testez la connexion avec le bouton ci-dessus</li>
+                    <li>Consultez le fichier FIREBASE_SETUP.md pour plus d'aide</li>
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 

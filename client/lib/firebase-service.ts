@@ -25,6 +25,7 @@ import {
   CreateWorkerRequest,
   UpdateWorkerRequest
 } from '@shared/types';
+import { offlineDataService } from './offline-data';
 
 // Collections
 const WORKERS_COLLECTION = 'workers';
@@ -72,6 +73,26 @@ const requireAuth = () => {
   return auth.currentUser;
 };
 
+// Test Firebase connection
+export const testFirebaseConnection = async (): Promise<{ connected: boolean; error?: string }> => {
+  try {
+    console.log('Testing Firebase connection...');
+
+    // Try a simple read operation
+    const testQuery = query(collection(db, 'dorms'));
+    await getDocs(testQuery);
+
+    console.log('Firebase connection successful');
+    return { connected: true };
+  } catch (error: any) {
+    console.error('Firebase connection failed:', error);
+    return {
+      connected: false,
+      error: `${error.code || 'unknown'}: ${error.message || 'Unknown error'}`
+    };
+  }
+};
+
 // Helper function to handle Firebase operations with error handling
 // Enhanced network retry wrapper with better error detection
 const withRetry = async <T>(operation: () => Promise<T>, retries = 3): Promise<T> => {
@@ -79,10 +100,19 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = 3): Promise<T
     try {
       return await operation();
     } catch (error: any) {
+      console.error(`Firebase operation attempt ${i + 1}/${retries} failed:`, {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        online: navigator.onLine
+      });
+
       const isNetworkError = error.message?.includes('Failed to fetch') ||
                            error.message?.includes('NetworkError') ||
+                           error.message?.includes('fetch') ||
                            error.code === 'unavailable' ||
                            error.code === 'deadline-exceeded' ||
+                           error.code === 'permission-denied' ||
                            !navigator.onLine;
 
       if (isNetworkError && i < retries - 1) {
@@ -99,11 +129,26 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = 3): Promise<T
   throw new Error('Nombre maximum de tentatives dépassé');
 };
 
-const withErrorHandling = async <T>(operation: () => Promise<T>): Promise<T> => {
+const withErrorHandling = async <T>(
+  operation: () => Promise<T>,
+  fallback?: () => T
+): Promise<T> => {
   try {
     return await withRetry(operation);
   } catch (error: any) {
     console.error('Firebase operation failed after retries:', error);
+
+    // If we have a fallback and this is a network error, use offline mode
+    if (fallback && (
+      error.message?.includes('Failed to fetch') ||
+      error.message?.includes('NetworkError') ||
+      error.code === 'unavailable' ||
+      !navigator.onLine
+    )) {
+      console.warn('Switching to offline mode');
+      offlineDataService.setOfflineMode(true);
+      return fallback();
+    }
 
     // Enhanced error handling with user-friendly messages
     const errorMessage = handleNetworkError(error);
@@ -114,16 +159,23 @@ const withErrorHandling = async <T>(operation: () => Promise<T>): Promise<T> => 
 // Dorms Service
 export const dormsService = {
   async getAll(): Promise<Dorm[]> {
-    return withErrorHandling(async () => {
-      requireAuth();
-      const querySnapshot = await getDocs(collection(db, DORMS_COLLECTION));
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        created_at: timestampToDate(doc.data().created_at),
-        updated_at: timestampToDate(doc.data().updated_at)
-      })) as Dorm[];
-    });
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const querySnapshot = await getDocs(collection(db, DORMS_COLLECTION));
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: timestampToDate(doc.data().created_at),
+          updated_at: timestampToDate(doc.data().updated_at)
+        })) as Dorm[];
+      },
+      () => {
+        // Offline fallback
+        offlineDataService.initialize();
+        return offlineDataService.getDorms();
+      }
+    );
   },
 
   async create(dorm: Omit<Dorm, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
@@ -142,16 +194,25 @@ export const dormsService = {
 // Rooms Service
 export const roomsService = {
   async getAll(): Promise<Room[]> {
-    requireAuth();
-    const querySnapshot = await getDocs(
-      query(collection(db, ROOMS_COLLECTION), orderBy('room_number'))
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const querySnapshot = await getDocs(
+          query(collection(db, ROOMS_COLLECTION), orderBy('room_number'))
+        );
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: timestampToDate(doc.data().created_at),
+          updated_at: timestampToDate(doc.data().updated_at)
+        })) as Room[];
+      },
+      () => {
+        // Offline fallback
+        offlineDataService.initialize();
+        return offlineDataService.getRooms();
+      }
     );
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      created_at: timestampToDate(doc.data().created_at),
-      updated_at: timestampToDate(doc.data().updated_at)
-    })) as Room[];
   },
 
   async getByDorm(dormId: string): Promise<Room[]> {
@@ -194,22 +255,31 @@ export const roomsService = {
 // Workers Service
 export const workersService = {
   async getAll(): Promise<Worker[]> {
-    requireAuth();
-    const querySnapshot = await getDocs(
-      query(collection(db, WORKERS_COLLECTION), orderBy('created_at', 'desc'))
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const querySnapshot = await getDocs(
+          query(collection(db, WORKERS_COLLECTION), orderBy('created_at', 'desc'))
+        );
+        return querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            age: data.birth_year ? calculateAge(data.birth_year) : undefined,
+            check_in_date: timestampToDate(data.check_in_date),
+            check_out_date: data.check_out_date ? timestampToDate(data.check_out_date) : undefined,
+            created_at: timestampToDate(data.created_at),
+            updated_at: timestampToDate(data.updated_at)
+          };
+        }) as Worker[];
+      },
+      () => {
+        // Offline fallback
+        offlineDataService.initialize();
+        return offlineDataService.getWorkers();
+      }
     );
-    return querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        age: data.birth_year ? calculateAge(data.birth_year) : undefined,
-        check_in_date: timestampToDate(data.check_in_date),
-        check_out_date: data.check_out_date ? timestampToDate(data.check_out_date) : undefined,
-        created_at: timestampToDate(data.created_at),
-        updated_at: timestampToDate(data.updated_at)
-      };
-    }) as Worker[];
   },
 
   async getActive(): Promise<Worker[]> {
@@ -251,8 +321,6 @@ export const workersService = {
   },
 
   async create(workerData: CreateWorkerRequest): Promise<string> {
-    requireAuth();
-
     // Validate required fields
     if (!workerData.room_id || workerData.room_id.trim() === '') {
       throw new Error('ID de chambre requis');
@@ -261,35 +329,53 @@ export const workersService = {
       throw new Error('ID de dortoir requis');
     }
 
-    const batch = writeBatch(db);
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const batch = writeBatch(db);
 
-    // Calculate stay duration if check_out_date exists
-    const stayDuration = workerData.check_in_date ?
-      Math.floor((new Date().getTime() - workerData.check_in_date.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        // Calculate stay duration if check_out_date exists
+        const stayDuration = workerData.check_in_date ?
+          Math.floor((new Date().getTime() - workerData.check_in_date.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Add worker
-    const workerRef = doc(collection(db, WORKERS_COLLECTION));
-    batch.set(workerRef, {
-      ...workerData,
-      status: 'Active',
-      stay_duration_days: stayDuration,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    });
+        // Add worker
+        const workerRef = doc(collection(db, WORKERS_COLLECTION));
+        batch.set(workerRef, {
+          ...workerData,
+          status: 'Active',
+          stay_duration_days: stayDuration,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
+        });
 
-    // Update room occupancy
-    const roomRef = doc(db, ROOMS_COLLECTION, workerData.room_id);
-    const roomDoc = await getDoc(roomRef);
-    if (roomDoc.exists()) {
-      const currentOccupancy = roomDoc.data().current_occupancy || 0;
-      batch.update(roomRef, {
-        current_occupancy: currentOccupancy + 1,
-        updated_at: serverTimestamp()
-      });
-    }
+        // Update room occupancy
+        const roomRef = doc(db, ROOMS_COLLECTION, workerData.room_id);
+        const roomDoc = await getDoc(roomRef);
+        if (roomDoc.exists()) {
+          const currentOccupancy = roomDoc.data().current_occupancy || 0;
+          batch.update(roomRef, {
+            current_occupancy: currentOccupancy + 1,
+            updated_at: serverTimestamp()
+          });
+        }
 
-    await batch.commit();
-    return workerRef.id;
+        await batch.commit();
+        return workerRef.id;
+      },
+      () => {
+        // Offline fallback
+        const worker: Worker = {
+          ...workerData,
+          id: '',
+          age: workerData.birth_year ? calculateAge(workerData.birth_year) : undefined,
+          status: 'Active',
+          stay_duration_days: 0,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        return offlineDataService.addWorker(worker);
+      }
+    );
   },
 
   async update(workerId: string, updates: UpdateWorkerRequest): Promise<void> {

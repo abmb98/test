@@ -16,7 +16,13 @@ import {
   Home,
   Gauge
 } from 'lucide-react';
-import { roomsService, workersService, dormsService, subscribeToRooms } from '@/lib/firebase-service';
+import {
+  hybridRoomsService as roomsService,
+  hybridWorkersService as workersService,
+  hybridDormsService as dormsService,
+  hybridSubscribeToRooms as subscribeToRooms,
+  hybridSubscribeToWorkers as subscribeToWorkers
+} from '@/lib/hybrid-firebase-service';
 import { Room, Worker, Dorm } from '@shared/types';
 
 export function Rooms() {
@@ -31,13 +37,20 @@ export function Rooms() {
 
   useEffect(() => {
     loadInitialData();
-    
-    // Subscribe to real-time updates
-    const unsubscribe = subscribeToRooms((updatedRooms) => {
+
+    // Subscribe to real-time updates for both rooms and workers
+    const unsubscribeRooms = subscribeToRooms((updatedRooms) => {
       setRooms(updatedRooms);
     });
 
-    return () => unsubscribe();
+    const unsubscribeWorkers = subscribeToWorkers((updatedWorkers) => {
+      setWorkers(updatedWorkers);
+    });
+
+    return () => {
+      unsubscribeRooms();
+      unsubscribeWorkers();
+    };
   }, []);
 
   const loadInitialData = async () => {
@@ -71,13 +84,30 @@ export function Rooms() {
     }
   };
 
+  // Calculate room occupancy based on current active workers
+  const getRoomOccupancy = (roomId: string) => {
+    const activeWorkers = workers.filter(worker =>
+      worker.room_id === roomId && worker.status === 'Active'
+    );
+    return activeWorkers.length;
+  };
+
+  // Get updated room data with current worker counts
+  const getUpdatedRooms = () => {
+    if (!rooms.length || !workers.length) return rooms;
+    return rooms.map(room => ({
+      ...room,
+      current_occupancy: getRoomOccupancy(room.id)
+    }));
+  };
+
   const getDormName = (dormId: string) => {
     const dorm = dorms.find(d => d.id === dormId);
     return dorm ? (dorm.name === 'Male' ? 'Hommes' : 'Femmes') : 'Non défini';
   };
 
   const getDormRooms = (dormId: string) => {
-    return rooms.filter(room => room.dorm_id === dormId);
+    return updatedRooms.filter(room => room.dorm_id === dormId);
   };
 
   const getOccupancyColor = (occupancy: number, capacity: number) => {
@@ -96,10 +126,11 @@ export function Rooms() {
     return 'destructive';
   };
 
-  const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter(r => r.current_occupancy > 0).length;
-  const fullRooms = rooms.filter(r => r.current_occupancy >= 4).length;
-  const emptyRooms = rooms.filter(r => r.current_occupancy === 0).length;
+  const updatedRooms = getUpdatedRooms();
+  const totalRooms = updatedRooms.length;
+  const occupiedRooms = updatedRooms.filter(r => r.current_occupancy > 0).length;
+  const fullRooms = updatedRooms.filter(r => r.current_occupancy >= 4).length;
+  const emptyRooms = updatedRooms.filter(r => r.current_occupancy === 0).length;
 
   if (loading) {
     return (
