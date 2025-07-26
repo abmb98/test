@@ -48,10 +48,10 @@ export function Login() {
             <Building className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Gestion du Dortoir
+            Gestion du secteur
           </h1>
           <p className="text-muted-foreground">
-            Système de gestion des ouvriers du dortoir universitaire
+            finca 20
           </p>
         </div>
 
@@ -59,7 +59,7 @@ export function Login() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Connexion</CardTitle>
             <CardDescription>
-              Entrez vos identifiants pour accéder au système
+              Entrez vos identifiants 
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -120,7 +120,7 @@ export function Login() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Ce système est réservé aux administrateurs autorisés uniquement
+               
               </p>
             </div>
           </CardContent>
