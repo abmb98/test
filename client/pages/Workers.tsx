@@ -26,7 +26,7 @@ import {
   Download,
   FileSpreadsheet
 } from 'lucide-react';
-import { workersService, roomsService, dormsService, subscribeToWorkers } from '@/lib/firebase-service';
+import { workersService, roomsService, dormsService, subscribeToWorkers, testFirebaseConnection } from '@/lib/firebase-service';
 import { Worker, Room, Dorm, EXIT_REASONS } from '@shared/types';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
