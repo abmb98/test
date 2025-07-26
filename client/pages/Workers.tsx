@@ -602,7 +602,22 @@ export function Workers() {
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            <div className="space-y-2">
+              <p>{error}</p>
+              {error.includes('permission-denied') || error.includes('Failed to fetch') ? (
+                <div className="text-sm mt-2 p-2 bg-destructive/10 rounded border-l-2 border-destructive/20">
+                  <p className="font-medium">Solutions possibles :</p>
+                  <ul className="list-disc list-inside space-y-1 mt-1">
+                    <li>Vérifiez les règles Firestore dans la console Firebase</li>
+                    <li>Assurez-vous que votre projet Firebase est configuré</li>
+                    <li>Testez la connexion avec le bouton ci-dessus</li>
+                    <li>Consultez le fichier FIREBASE_SETUP.md pour plus d'aide</li>
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 
