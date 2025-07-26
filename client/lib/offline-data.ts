@@ -48,6 +48,12 @@ const sampleRooms: Room[] = [
   }))
 ];
 
+// Calculate age from birth year
+const calculateAge = (birthYear: number): number => {
+  const currentYear = new Date().getFullYear();
+  return currentYear - birthYear;
+};
+
 const sampleWorkers: Worker[] = [
   {
     id: 'worker_1',
@@ -55,7 +61,7 @@ const sampleWorkers: Worker[] = [
     cin: '12345678',
     phone: '0512345678',
     birth_year: 1990,
-    age: 34,
+    age: calculateAge(1990),
     dorm_id: 'dorm_male',
     room_id: 'room_male_1',
     check_in_date: new Date('2024-01-15'),
@@ -72,7 +78,7 @@ const sampleWorkers: Worker[] = [
     cin: '87654321',
     phone: '0687654321',
     birth_year: 1985,
-    age: 39,
+    age: calculateAge(1985),
     dorm_id: 'dorm_female',
     room_id: 'room_female_1',
     check_in_date: new Date('2024-01-10'),
@@ -89,7 +95,7 @@ const sampleWorkers: Worker[] = [
     cin: '11223344',
     phone: '0511223344',
     birth_year: 1992,
-    age: 32,
+    age: calculateAge(1992),
     dorm_id: 'dorm_male',
     room_id: 'room_male_2',
     check_in_date: new Date('2024-01-20'),
@@ -98,6 +104,57 @@ const sampleWorkers: Worker[] = [
     status: 'Active',
     stay_duration_days: undefined,
     created_at: new Date('2024-01-20'),
+    updated_at: new Date()
+  },
+  {
+    id: 'worker_4',
+    full_name: 'Maryam Al-Zahra',
+    cin: '55667788',
+    phone: '0655667788',
+    birth_year: 1988,
+    age: calculateAge(1988),
+    dorm_id: 'dorm_female',
+    room_id: 'room_female_2',
+    check_in_date: new Date('2024-01-18'),
+    check_out_date: undefined,
+    exit_reason: undefined,
+    status: 'Active',
+    stay_duration_days: undefined,
+    created_at: new Date('2024-01-18'),
+    updated_at: new Date()
+  },
+  {
+    id: 'worker_5',
+    full_name: 'Youssef Ibrahim',
+    cin: '99887766',
+    phone: '0599887766',
+    birth_year: 1995,
+    age: calculateAge(1995),
+    dorm_id: 'dorm_male',
+    room_id: 'room_male_3',
+    check_in_date: new Date('2024-01-22'),
+    check_out_date: undefined,
+    exit_reason: undefined,
+    status: 'Active',
+    stay_duration_days: undefined,
+    created_at: new Date('2024-01-22'),
+    updated_at: new Date()
+  },
+  {
+    id: 'worker_6',
+    full_name: 'Aisha Salem',
+    cin: '33445566',
+    phone: '0633445566',
+    birth_year: 1993,
+    age: calculateAge(1993),
+    dorm_id: 'dorm_female',
+    room_id: 'room_female_3',
+    check_in_date: new Date('2024-01-25'),
+    check_out_date: undefined,
+    exit_reason: undefined,
+    status: 'Active',
+    stay_duration_days: undefined,
+    created_at: new Date('2024-01-25'),
     updated_at: new Date()
   }
 ];
