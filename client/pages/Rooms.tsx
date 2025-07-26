@@ -119,10 +119,11 @@ export function Rooms() {
     return 'destructive';
   };
 
-  const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter(r => r.current_occupancy > 0).length;
-  const fullRooms = rooms.filter(r => r.current_occupancy >= 4).length;
-  const emptyRooms = rooms.filter(r => r.current_occupancy === 0).length;
+  const updatedRooms = getUpdatedRooms();
+  const totalRooms = updatedRooms.length;
+  const occupiedRooms = updatedRooms.filter(r => r.current_occupancy > 0).length;
+  const fullRooms = updatedRooms.filter(r => r.current_occupancy >= 4).length;
+  const emptyRooms = updatedRooms.filter(r => r.current_occupancy === 0).length;
 
   if (loading) {
     return (
