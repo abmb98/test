@@ -78,6 +78,22 @@ export function Rooms() {
     }
   };
 
+  // Calculate room occupancy based on current active workers
+  const getRoomOccupancy = (roomId: string) => {
+    const activeWorkers = workers.filter(worker =>
+      worker.room_id === roomId && worker.status === 'Active'
+    );
+    return activeWorkers.length;
+  };
+
+  // Get updated room data with current worker counts
+  const getUpdatedRooms = () => {
+    return rooms.map(room => ({
+      ...room,
+      current_occupancy: getRoomOccupancy(room.id)
+    }));
+  };
+
   const getDormName = (dormId: string) => {
     const dorm = dorms.find(d => d.id === dormId);
     return dorm ? (dorm.name === 'Male' ? 'Hommes' : 'Femmes') : 'Non défini';
