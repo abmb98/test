@@ -25,6 +25,7 @@ import {
   CreateWorkerRequest,
   UpdateWorkerRequest
 } from '@shared/types';
+import { offlineDataService } from './offline-data';
 
 // Collections
 const WORKERS_COLLECTION = 'workers';
