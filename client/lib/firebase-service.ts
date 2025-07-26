@@ -72,6 +72,26 @@ const requireAuth = () => {
   return auth.currentUser;
 };
 
+// Test Firebase connection
+export const testFirebaseConnection = async (): Promise<{ connected: boolean; error?: string }> => {
+  try {
+    console.log('Testing Firebase connection...');
+
+    // Try a simple read operation
+    const testQuery = query(collection(db, 'dorms'));
+    await getDocs(testQuery);
+
+    console.log('Firebase connection successful');
+    return { connected: true };
+  } catch (error: any) {
+    console.error('Firebase connection failed:', error);
+    return {
+      connected: false,
+      error: `${error.code || 'unknown'}: ${error.message || 'Unknown error'}`
+    };
+  }
+};
+
 // Helper function to handle Firebase operations with error handling
 // Enhanced network retry wrapper with better error detection
 const withRetry = async <T>(operation: () => Promise<T>, retries = 3): Promise<T> => {
