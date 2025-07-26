@@ -129,11 +129,26 @@ const withRetry = async <T>(operation: () => Promise<T>, retries = 3): Promise<T
   throw new Error('Nombre maximum de tentatives dépassé');
 };
 
-const withErrorHandling = async <T>(operation: () => Promise<T>): Promise<T> => {
+const withErrorHandling = async <T>(
+  operation: () => Promise<T>,
+  fallback?: () => T
+): Promise<T> => {
   try {
     return await withRetry(operation);
   } catch (error: any) {
     console.error('Firebase operation failed after retries:', error);
+
+    // If we have a fallback and this is a network error, use offline mode
+    if (fallback && (
+      error.message?.includes('Failed to fetch') ||
+      error.message?.includes('NetworkError') ||
+      error.code === 'unavailable' ||
+      !navigator.onLine
+    )) {
+      console.warn('Switching to offline mode');
+      offlineDataService.setOfflineMode(true);
+      return fallback();
+    }
 
     // Enhanced error handling with user-friendly messages
     const errorMessage = handleNetworkError(error);
