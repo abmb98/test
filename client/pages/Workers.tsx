@@ -373,6 +373,63 @@ export function Workers() {
     );
   }
 
+  // Show Firebase setup instructions if there's a connection error
+  if (error && workers.length === 0 && !loading) {
+    return (
+      <div className="p-6 animate-fade-in">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-destructive">🚨 Configuration Firebase requise</CardTitle>
+            <CardDescription>
+              Une configuration Firebase est nécessaire pour utiliser l'application.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+
+            <div className="space-y-3">
+              <h4 className="font-medium">Solution rapide :</h4>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Allez sur <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Firebase Console</a></li>
+                <li>Sélectionnez le projet <code className="bg-muted px-1 rounded">secteur-14f7c</code></li>
+                <li>Cliquez sur "Firestore Database" → "Règles"</li>
+                <li>Remplacez le contenu par :</li>
+              </ol>
+
+              <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+              </pre>
+
+              <p className="text-sm text-muted-foreground">
+                5. Cliquez sur "Publier" puis rafraîchissez cette page.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleTestConnection} disabled={loading}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Tester la connexion
+              </Button>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Rafraîchir la page
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Header */}
