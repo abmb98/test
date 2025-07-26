@@ -28,8 +28,7 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { dashboardService } from '@/lib/firebase-service';
-import { hybridWorkersService, hybridRoomsService, hybridDormsService } from '@/lib/hybrid-firebase-service';
+import { hybridDashboardService as dashboardService } from '@/lib/hybrid-dashboard-service';
 import { offlineDataService } from '@/lib/offline-data';
 import { DashboardStats, RecentExit, Worker } from '@shared/types';
 import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
