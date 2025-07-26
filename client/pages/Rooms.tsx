@@ -16,7 +16,7 @@ import {
   Home,
   Gauge
 } from 'lucide-react';
-import { roomsService, workersService, dormsService, subscribeToRooms } from '@/lib/firebase-service';
+import { roomsService, workersService, dormsService, subscribeToRooms, subscribeToWorkers } from '@/lib/firebase-service';
 import { Room, Worker, Dorm } from '@shared/types';
 
 export function Rooms() {
