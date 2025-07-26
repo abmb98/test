@@ -161,6 +161,7 @@ export function Workers() {
           // Setting check out date - worker becomes inactive
           updates.check_out_date = new Date(formData.check_out_date);
           updates.exit_reason = formData.exit_reason;
+          updates.status = 'Inactive';
         } else if (!formData.check_out_date && editingWorker.check_out_date) {
           // Clearing check out date - worker becomes active again
           updates.check_out_date = null;
