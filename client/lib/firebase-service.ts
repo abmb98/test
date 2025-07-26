@@ -239,22 +239,31 @@ export const roomsService = {
 // Workers Service
 export const workersService = {
   async getAll(): Promise<Worker[]> {
-    requireAuth();
-    const querySnapshot = await getDocs(
-      query(collection(db, WORKERS_COLLECTION), orderBy('created_at', 'desc'))
+    return withErrorHandling(
+      async () => {
+        requireAuth();
+        const querySnapshot = await getDocs(
+          query(collection(db, WORKERS_COLLECTION), orderBy('created_at', 'desc'))
+        );
+        return querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            age: data.birth_year ? calculateAge(data.birth_year) : undefined,
+            check_in_date: timestampToDate(data.check_in_date),
+            check_out_date: data.check_out_date ? timestampToDate(data.check_out_date) : undefined,
+            created_at: timestampToDate(data.created_at),
+            updated_at: timestampToDate(data.updated_at)
+          };
+        }) as Worker[];
+      },
+      () => {
+        // Offline fallback
+        offlineDataService.initialize();
+        return offlineDataService.getWorkers();
+      }
     );
-    return querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        age: data.birth_year ? calculateAge(data.birth_year) : undefined,
-        check_in_date: timestampToDate(data.check_in_date),
-        check_out_date: data.check_out_date ? timestampToDate(data.check_out_date) : undefined,
-        created_at: timestampToDate(data.created_at),
-        updated_at: timestampToDate(data.updated_at)
-      };
-    }) as Worker[];
   },
 
   async getActive(): Promise<Worker[]> {
